@@ -6,9 +6,6 @@ This is a simple bash/shell script to backup running virtual machines on XCP-ng 
 
 Download this script and modify some parameters as per your network and directory structure.
 
-LOGLEVEL=0
-SYSLOGER="true"
-
 - MOUNTPOINT=/mnt/nfs   ## change this with your system mount point
 - NFS_SERVER_IP="192.168.10.100"   ## IP of your NFS server.
 - FILE_LOCATION_ON_NFS="/remote/nfs/location"  ## Location to store backups on NFS server.

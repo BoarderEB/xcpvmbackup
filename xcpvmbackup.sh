@@ -78,6 +78,26 @@ function BACKUPDIRS() {
   echo "$BACKUPDIRS"
 }
 
+### is there enough free space
+### $(FREESPACE VM-UUID BACKUPDIR)
+### $(FREESPACE 0bb5b07c-8797-79bc-719d-0da70aa6f7d4 /mnt/nfs)
+
+function FREESPACE() {
+  DISKLIST=$(xe vm-disk-list vm=$1 vdi-params=virtual-size | grep "virtual-size" | grep -oP "[0-9]+$" )
+  for DISK in "$DISKLIST"; do
+    DISKSPACE=$(echo $DISK $DISKSPACE | awk '{print $1 + $2}')
+  done
+
+  FREESPACE=$(df --block-size=1 $2 --output=avail | sed -e 1d)
+
+  if [[ $DISKSPACE -lt  $FREESPACE ]]; then
+    echo "true"
+  else
+    echo "false"
+  fi
+}
+
+
 LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
@@ -124,17 +144,20 @@ fi
 ### start snapshot and export
 while read VMUUID
 do
+  VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
+  if [[ $(FREESPACE $VMUUID /mnt/nfsbackup) == "true" ]]; then
+    LOGGERMASSAGE "create snapshoot from: $VMNAME"
+    SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
+  	xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
 
-	VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
-  LOGGERMASSAGE "create snapshoot from: $VMNAME"
-  SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
-	xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
+  	LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
+  	xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
 
-	LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
-	xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
-
-	LOGGERMASSAGE "remove snapshoot from: $VMNAME"
-	xe vm-uninstall uuid=${SNAPUUID} force=true
+  	LOGGERMASSAGE "remove snapshoot from: $VMNAME"
+  	xe vm-uninstall uuid=${SNAPUUID} force=true
+  else
+    LOGGERMASSAGE 0 "Error: enough space to export $VMNAME to $MOUNTPOINT"
+  fi
 done < ${UUIDFILE}
 
 ## start remove old backups

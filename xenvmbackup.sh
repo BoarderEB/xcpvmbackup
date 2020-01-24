@@ -10,9 +10,8 @@
 
 # To change:
 
-
 NFS_SERVER_IP="192.168.10.100"
-MOUNTPOINT=/xenmnt
+MOUNTPOINT=/mnt/nfs
 FILE_LOCATION_ON_NFS="/backup/citrix/vms"
 MAXBACKUPS=2
 
@@ -20,6 +19,10 @@ MAXBACKUPS=2
 # Loglevel 1=every action
 
 LOGLEVEL=0
+SYSLOGER="true"
+
+#SET SYSLOGGERSYSLOGGERPATH IF NOT "logger"
+#SYSLOGGERPATH="/usr/bin/logger"
 
 # int. Variablen
 
@@ -27,151 +30,142 @@ XSNAME=`echo $HOSTNAME`
 DATE=$(date +%d-%m-%Y)-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
 UUIDFILE=$(mktemp /tmp/xen-uuids.XXXXXXXXX)
 
+## LOGGERMASSAGE function
+## Var1: LOGGERMASSAGE LOGLEVEL "LOGMASSAGE"
+## Var2: LOGGERMASSAGE "LOGMASSAGE" = LOGLEVEL 1 = only start and stop
 
-echo "start Xen Server VM Backup"
-logger "$0: start Xen Server VM Backup"
+function SYSLOGGER() {
+  if [[ SYSLOGER -eq "true" ]]; then
+    if [ -z ${SYSLOGGERPATH} ];then
+      if hash logger 2>/dev/null; then
+        logger $1
+      fi
+    else
+      if [[ -x ${SYSLOGGERPATH} ]]; then
+        $SYSLOGGERPATH $1
+      fi
+    fi
+  fi
+}
+
+function LOGGERMASSAGE() {
+  if [[ $LOGLEVEL != 0 ]]; then
+    if [[ $1 =~ ^[0-9]+$ ]]; then
+    	echo $0: $2
+	 	  SYSLOGGER "$0: $2"
+    else
+      echo $0: $1 $2
+	 	  SYSLOGGER "$0: $1 $2"
+    fi
+  else
+    if [[ $1 == 1 ]]; then
+      echo $0: $2
+      SYSLOGGER "$0: $2"
+    fi
+	fi
+}
+
+### get Backupdir
+### -c = count of Backups
+
+function BACKUPDIRS() {
+  local BACKUPPATH="$MOUNTPOINT/$XSNAME/"
+  local BACKUPDIRS=$(find $BACKUPPATH  -maxdepth 1 -type d -printf "%T@ %p\n"  | sort -n -r | cut -d' ' -f2 |  grep -v "^$BACKUPPATH$" | grep -v "^.$")
+  if [[ $1 = "-c" ]]; then
+    local BACKUPDIRS=$(echo "$BACKUPDIRS" | wc -l)
+  fi
+  echo "$BACKUPDIRS"
+}
+
+LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
-
-if [[ $LOGLEVEL != 0 ]]; then
-	LOGGERMASSAGE="$0: create mountpoint $MOUNTPOINT if not exist"
-	echo $LOGGERMASSAGE
- 	logger $LOGGERMASSAGE
-fi
-
-mkdir -p ${MOUNTPOINT}
-
-### Mounting remote nfs share backup drive
-
+LOGGERMASSAGE "create mountpoint $MOUNTPOINT if not exist"
+mkdir -p $MOUNTPOINT
 if [[ ! -d ${MOUNTPOINT} ]]; then
-	LOGGERMASSAGE="Error: $0: No mount point found, kindly check"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
+	LOGGERMASSAGE 0 "Error: No mount point found, kindly check"
 	exit 1
 fi
 
-if [[ $LOGLEVEL != 0 ]]; then
-	LOGGERMASSAGE="$0: mount NFS $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
+### check if nfs allrady moundet if not mount
+MOUNDET=$(stat -c%d "$MOUNTPOINT")
+if grep -qs "$NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT" /proc/mounts; then
+  MOUNDET="allrady"
+  LOGGERMASSAGE "$NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT allrady mounted"
+else
+  LOGGERMASSAGE "mount NFS $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS"
+  mount -t nfs $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT
 fi
 
-mount -t nfs ${NFS_SERVER_IP}:${FILE_LOCATION_ON_NFS} ${MOUNTPOINT}
-
-BACKUPPATH=${MOUNTPOINT}/${XSNAME}/${DATE}
-
-if [[ $LOGLEVEL != 0 ]]; then
-	LOGGERMASSAGE="$0: create backuppath $BACKUPPATH if not exist"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
+if [[ `stat -c%d "$MOUNTPOINT"` -eq $MOUNDET ]]; then
+  LOGGERMASSAGE 1 "Error: Coult not mount $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT"
+  exit 1
 fi
 
-mkdir -p ${BACKUPPATH}
+### creat backuppath if not exist
+BACKUPPATH="$MOUNTPOINT/$XSNAME/$DATE"
+LOGGERMASSAGE "create backuppath $BACKUPPATH if not exist"
+mkdir -p $BACKUPPATH
 
 if [[ ! -d ${BACKUPPATH} ]]; then
-	LOGGERMASSAGE="Error: $0: No backup directory found"
-	echo $LOGGERMASSAGE
-	logger LOGGERMASSAGE
+	LOGGERMASSAGE 0 "Error: No backup directory found"
 	exit 1
 fi
 
-# Fetching list UUIDs of all VMs running on XenServer
-
-if [[ $LOGLEVEL != 0 ]]; then
-	LOGGERMASSAGE="$0: create UuidFile ${UUIDFILE}"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
-fi
-
+### Fetching list UUIDs of all VMs running on XenServer
+LOGGERMASSAGE "create UuidFile ${UUIDFILE}"
 xe vm-list is-control-domain=false is-a-snapshot=false | grep uuid | cut -d":" -f2 > ${UUIDFILE}
-
 if [[ ! -f ${UUIDFILE} ]]; then
-			LOGGERMASSAGE="Error: $0: No UUID list file found"
-       echo $LOGGERMASSAGE
-       logger $LOGGERMASSAGE
-       exit 1
+	LOGGERMASSAGE 0 "Error: Could not create UUID-file"
+	exit 1
 fi
 
+### start snapshot and export
 while read VMUUID
 do
-    VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
 
-    if [[ $LOGLEVEL != 0 ]]; then
-			LOGGERMASSAGE="$0: create snapshoot from: $VMNAME"
-	    echo $LOGGERMASSAGE
-	    logger $LOGGERMASSAGE
-    fi
+	VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
+  LOGGERMASSAGE "create snapshoot from: $VMNAME"
+  SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
+	xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
 
-    SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
+	LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
+	xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
 
-    xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
-
-    if [[ $LOGLEVEL != 0 ]]; then
-			LOGGERMASSAGE="$0: export snapshoot $VMNAME to $BACKUPPATH"
-			echo $LOGGERMASSAGE
-			logger $LOGGERMASSAGE
-    fi
-
-    xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
-
-    if [[ $LOGLEVEL != 0 ]]; then
-			LOGGERMASSAGE="$0: remove snapshoot from: $VMNAME"
-	    echo $LOGGERMASSAGE
-	    logger $LOGGERMASSAGE
-    fi
-
-    xe vm-uninstall uuid=${SNAPUUID} force=true
-
+	LOGGERMASSAGE "remove snapshoot from: $VMNAME"
+	xe vm-uninstall uuid=${SNAPUUID} force=true
 done < ${UUIDFILE}
 
-BACKUPPATH=${MOUNTPOINT}/${XSNAME}/
-BACKUPDIRS=$(find $BACKUPPATH  -maxdepth 1 -type d -printf "%T@ %p\n"  | sort -n -r | cut -d' ' -f2 |  grep -v "^$BACKUPPATH$" | grep -v "^.$")
+## start remove old backups
+BACKUPS=$(BACKUPDIRS -c)
+COUNT=$(($BACKUPS-$MAXBACKUPS))
+if [[ $COUNT -lt 0 ]]; then
+  COUNT=0
+fi
+LOGGERMASSAGE "$BACKUPS backup found - remove $COUNT old backup"
 
-if [[ $LOGLEVEL != 0 ]]; then
-	BACKUPS=$(echo $BACKUPDIRS | wc -l)
-	COUNT=$(($BACKUPS-$MAXBACKUPS))
+if [[ $COUNT > 0 ]]; then
+  COUNT=1
+  for DIR in $(BACKUPDIRS);do
+    if [[ $COUNT > $MAXBACKUPS ]]; then
+      rm -rf $DIR
+    fi
+    COUNT=$(($COUNT+1))
+  done
 
-	if [[ $COUNT -lt 0 ]]; then
-		COUNT=0
-	fi
-
-  LOGGERMASSAGE="$0: $BACKUPS backup found - remove $COUNT old backup"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
+  if [[ $(BACKUPDIRS -c) == $MAXBACKUPS ]]; then
+    LOGGERMASSAGE "old backups are removed"
+  else
+    LOGGERMASSAGE 0 "Error: not all old backups are removed"
+  fi
 fi
 
-COUNT=1
-for BDIR in $BACKUPDIRS;do
-	if [[ $COUNT > $MAXBACKUPS ]]; then
-		rm -rf $BDIR
-	fi
-	COUNT=$(($COUNT+1))
-done
-
-BACKUPS=$(echo "$BACKUPDIRS" | wc -l)
-
-if [[ $BACKUPS != $MAXBACKUPS ]]; then
-	LOGGERMASSAGE="$0: Error: not all old backups are removed"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
-else
-	if [[ $LOGLEVEL != 0 ]]; then
-		LOGGERMASSAGE="$0: old backups are removed"
-		echo $LOGGERMASSAGE
-		logger $LOGGERMASSAGE
-	fi
+# unmount if not allrady for the script moundet
+if [[ $MOUNDET != "allrady"  ]]; then
+  LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
+	umount $MOUNTPOINT
 fi
 
-if [[ $LOGLEVEL != 0 ]]; then
-	LOGGERMASSAGE="$0: unmount NFS $MOUNTPOINT"
-	echo $LOGGERMASSAGE
-	logger $LOGGERMASSAGE
-fi
-
-umount ${MOUNTPOINT}
-
-LOGGERMASSAGE="$0: Xen Server VM Backup finished"
-echo $LOGGERMASSAGE
-logger $LOGGERMASSAGE
-
+### YIPPI we are finished
+LOGGERMASSAGE 0 "$0: Xen Server VM Backup finished"
 exit 0

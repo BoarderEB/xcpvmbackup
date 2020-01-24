@@ -16,11 +16,14 @@ MOUNTPOINT=/mnt/nfs
 FILE_LOCATION_ON_NFS="/remote/nfs/location"
 MAXBACKUPS=2
 
-# Loglevel 0=only start and exit
-# Loglevel 1=every action
+# Loglevel 0=Only Errors
+# Loglevel 1=start and exit and Errors
+# Loglevel 2=every action
 
-LOGLEVEL=0
+LOGLEVEL=1
 SYSLOGER="true"
+LOGMAIL="true"
+#MAILADRESS="your@email.com" # if not set send mail to $USER
 
 #SET SYSLOGGERSYSLOGGERPATH IF NOT "logger"
 #SYSLOGGERPATH="/usr/bin/logger"
@@ -29,7 +32,8 @@ SYSLOGER="true"
 
 XSNAME=`echo $HOSTNAME`
 DATE=$(date +%d-%m-%Y)-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
-UUIDFILE=$(mktemp /tmp/xen-uuids.XXXXXXXXX)
+UUIDFILE=$(mktemp /tmp/uuids.XXXXXXXXX)
+MAILFILE=$(mktemp /tmp/mail.XXXXXXXXX)
 
 ## LOGGERMASSAGE function
 ## Var1: LOGGERMASSAGE LOGLEVEL "LOGMASSAGE"
@@ -50,24 +54,57 @@ function SYSLOGGER() {
 }
 
 function LOGGERMASSAGE() {
-  if [[ $LOGLEVEL != 0 ]]; then
+  if [[ $LOGLEVEL > 1 ]]; then
     if [[ $1 =~ ^[0-9]+$ ]]; then
     	echo $0: $2
+      echo "$0: $2" >> $MAILFILE
 	 	  SYSLOGGER "$0: $2"
     else
       echo $0: $1 $2
+      echo "$0: $1 $2" >> $MAILFILE
 	 	  SYSLOGGER "$0: $1 $2"
     fi
   else
-    if [[ $1 == 1 ]]; then
+    if [[ $1 -le $LOGLEVEL ]]; then
       echo $0: $2
+      echo "$0: $2" >> $MAILFILE
       SYSLOGGER "$0: $2"
     fi
-	fi
+  fi
 }
 
-### get Backupdir
-### -c = count of Backups
+### Send Mail
+
+function MAILTO() {
+  if [[ $LOGMAIL == "true" ]]; then
+    if [[ $(cat $MAILFILE) != '' ]]; then
+      if [[ -z ${MAILADRESS} ]]; then
+        MAILADRESS=$USER
+      fi
+      if [[ $(cat $MAILFILE | grep -i "error") != '' ]]; then
+        SUBJECT="xcpvmbackup-error: from $XSNAME"
+      else
+        SUBJECT="xcpvmbackup-log: from $XSNAME"
+      fi
+      cat $MAILFILE | mail -s "$SUBJECT" "$MAILADRESS"
+    fi
+  fi
+}
+
+### commands before exit + cleans up + exit the script
+### QUIT "EXITCODE"
+### QUIT 0 = exit 0
+
+function QUIT() {
+  MAILTO
+  rm $UUIDFILE
+  rm $MAILFILE
+  exit $1
+}
+
+### get a List of Backupdirs
+### -c = count of Backupsdirs
+### $(BACKUPDIRS -c)
 
 function BACKUPDIRS() {
   local BACKUPPATH="$MOUNTPOINT/$XSNAME/"
@@ -79,6 +116,7 @@ function BACKUPDIRS() {
 }
 
 ### is there enough free space
+### return "true" or "false"
 ### $(FREESPACE VM-UUID BACKUPDIR)
 ### $(FREESPACE 0bb5b07c-8797-79bc-719d-0da70aa6f7d4 /mnt/nfs)
 
@@ -97,7 +135,6 @@ function FREESPACE() {
   fi
 }
 
-
 LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
@@ -105,7 +142,7 @@ LOGGERMASSAGE "create mountpoint $MOUNTPOINT if not exist"
 mkdir -p $MOUNTPOINT
 if [[ ! -d ${MOUNTPOINT} ]]; then
 	LOGGERMASSAGE 0 "Error: No mount point found, kindly check"
-	exit 1
+	QUIT 1
 fi
 
 ### check if nfs allrady moundet if not mount
@@ -119,8 +156,8 @@ else
 fi
 
 if [[ `stat -c%d "$MOUNTPOINT"` -eq $MOUNDET ]]; then
-  LOGGERMASSAGE 1 "Error: Coult not mount $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT"
-  exit 1
+  LOGGERMASSAGE 0 "Error: Coult not mount $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT"
+  QUIT 1
 fi
 
 ### creat backuppath if not exist
@@ -130,7 +167,7 @@ mkdir -p $BACKUPPATH
 
 if [[ ! -d ${BACKUPPATH} ]]; then
 	LOGGERMASSAGE 0 "Error: No backup directory found"
-	exit 1
+	QUIT 1
 fi
 
 ### Fetching list UUIDs of all VMs running on XenServer
@@ -138,7 +175,7 @@ LOGGERMASSAGE "create UuidFile ${UUIDFILE}"
 xe vm-list is-control-domain=false is-a-snapshot=false | grep uuid | cut -d":" -f2 > ${UUIDFILE}
 if [[ ! -f ${UUIDFILE} ]]; then
 	LOGGERMASSAGE 0 "Error: Could not create UUID-file"
-	exit 1
+	QUIT 1
 fi
 
 ### start snapshot and export
@@ -191,5 +228,5 @@ if [[ $MOUNDET != "allrady"  ]]; then
 fi
 
 ### YIPPI we are finished
-LOGGERMASSAGE 0 "$0: Xen Server VM Backup finished"
-exit 0
+LOGGERMASSAGE 1 "$0: Xen Server VM Backup finished"
+QUIT 1

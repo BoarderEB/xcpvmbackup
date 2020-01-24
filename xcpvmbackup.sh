@@ -7,12 +7,13 @@
 # Visit: https://tecadmin.net/backup-running-virtual-machine-in-xenserver/
 #
 # Fork: Boardereb
+# Only tested on XCP-NG
 
 # To change:
 
 NFS_SERVER_IP="192.168.10.100"
 MOUNTPOINT=/mnt/nfs
-FILE_LOCATION_ON_NFS="/backup/citrix/vms"
+FILE_LOCATION_ON_NFS="/remote/nfs/location"
 MAXBACKUPS=2
 
 # Loglevel 0=only start and exit
@@ -160,7 +161,7 @@ if [[ $COUNT > 0 ]]; then
   fi
 fi
 
-# unmount if not allrady for the script moundet
+# unmount if not befor for the script moundet
 if [[ $MOUNDET != "allrady"  ]]; then
   LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
 	umount $MOUNTPOINT

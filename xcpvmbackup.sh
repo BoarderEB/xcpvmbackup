@@ -156,7 +156,7 @@ do
   	LOGGERMASSAGE "remove snapshoot from: $VMNAME"
   	xe vm-uninstall uuid=${SNAPUUID} force=true
   else
-    LOGGERMASSAGE 0 "Error: enough space to export $VMNAME to $MOUNTPOINT"
+    LOGGERMASSAGE 0 "Error: not enough space to export $VMNAME to $MOUNTPOINT"
   fi
 done < ${UUIDFILE}
 

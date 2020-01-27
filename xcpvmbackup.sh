@@ -102,9 +102,6 @@ function QUIT() {
   MAILTO
   rm $UUIDFILE
   rm $MAILFILE
-
-  rm
-
   exit $1
 }
 
@@ -243,23 +240,23 @@ if [[ -z "$EXPORTERROR" ]]; then
     fi
   fi
 else
-      LOGGERMASSAGE 0 "Error: Do not remove old Backups becouse a error in the new backup"
+  LOGGERMASSAGE 0 "Error: Do not remove old Backups becouse a error in the new backup"
 fi
 
 # unmount if not befor for the script moundet
 if [[ $MOUNDET != "allrady"  ]]; then
   LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
-	MESSAGE=$(umount $MOUNTPOINT 2>&1)
+	umount $MOUNTPOINT
   if [[ $? -eq 0 ]]; then
-    if [[ -z MOUNTEXIST ]]; then
+    if [[ ! -z MOUNTEXIST ]]; then
       LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
       rm -rf $MOUNTPOINT
     fi
   else
-  LOGGERMASSAGE 0 "Error: $MESSAGE"
+    LOGGERMASSAGE 0 "Error: could not umount $MOUNTPOINT because of that not deleted"
   fi
 fi
 
 ### YIPPI we are finished
 LOGGERMASSAGE 1 "$0: Xen Server VM Backup finished"
-QUIT 1
+QUIT 0

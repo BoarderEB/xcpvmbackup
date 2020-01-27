@@ -186,19 +186,21 @@ do
     SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
     xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
     if [[ $? -ne 0 ]]; then
+      LOGGERMASSAGE 0 "Error: When create snapshoot from: $VMNAME  - see xcp-syslog"
       EXPORTERROR="true"
     fi
 
   	LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
   	xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
     if [[ $? -ne 0 ]]; then
+      LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME to $BACKUPPATH  - see xcp-syslog"
       EXPORTERROR="true"
     fi
 
     LOGGERMASSAGE "remove snapshoot from: $VMNAME"
   	xe vm-uninstall uuid=${SNAPUUID} force=true
     if [[ $? -ne 0 ]]; then
-      EXPORTERROR="true"
+      LOGGERMASSAGE 0 "Error: When remove snapshoot from: $VMNAME - see xcp-syslog"
     fi
   else
     EXPORTERROR="true"

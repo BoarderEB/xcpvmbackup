@@ -249,12 +249,14 @@ fi
 # unmount if not befor for the script moundet
 if [[ $MOUNDET != "allrady"  ]]; then
   LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
-	umount $MOUNTPOINT
+	MESSAGE=$(umount $MOUNTPOINT 2>&1)
   if [[ $? -eq 0 ]]; then
     if [[ -z MOUNTEXIST ]]; then
       LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
       rm -rf $MOUNTPOINT
     fi
+  else
+  LOGGERMASSAGE "Error: $MESSAGE"
   fi
 fi
 

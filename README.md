@@ -6,7 +6,6 @@ This is a solid handcraft bash script to backup running virtual machines on XCP-
 
 Download this script and modify some parameters as per your network and directory structure.
 
-- MOUNTPOINT=/mnt/nfs   ## change this with your system mount point
 - NFS_SERVER_IP="192.168.10.100"   ## IP of your NFS server.
 - FILE_LOCATION_ON_NFS="/remote/nfs/location"  ## Location to store backups on NFS server.
 
@@ -19,7 +18,7 @@ Now execute the script from command line
 > $ ./xcpvmbackup.sh
 
 For an automatic backup copy the script to one of this:
-/etc/cron.daily or /etc/cron.weekly or cron.monthly
+/etc/cron.daily or /etc/cron.weekly or /etc/cron.monthly
 
 If you want to have more than one backup loop. Then modify in the scriptcopys in /etc/cron.* :
 

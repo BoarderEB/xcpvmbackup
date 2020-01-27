@@ -15,7 +15,6 @@
 ### To change:
 
 NFS_SERVER_IP="192.168.10.100"
-MOUNTPOINT="/mnt/nfs"
 FILE_LOCATION_ON_NFS="/remote/nfs/location"
 MAXBACKUPS="2"
 
@@ -37,7 +36,9 @@ SYSLOGER="true"
 ### int. Variablen
 
 XSNAME=$(echo $HOSTNAME)
-DATE=$(date +%d-%m-%Y)-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
+INTRANDOME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
+MOUNTPOINT=$(echo "/mnt/xcpvmbackup")-$(echo $INTRANDOME)
+DATE=$(date +%d-%m-%Y)-$(echo $INTRANDOME)
 UUIDFILE=$(mktemp /tmp/uuids.XXXXXXXXX)
 MAILFILE=$(mktemp /tmp/mail.XXXXXXXXX)
 
@@ -101,6 +102,9 @@ function QUIT() {
   MAILTO
   rm $UUIDFILE
   rm $MAILFILE
+
+  rm
+
   exit $1
 }
 
@@ -139,10 +143,15 @@ LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
 LOGGERMASSAGE "create mountpoint $MOUNTPOINT if not exist"
-mkdir -p $MOUNTPOINT
+
 if [[ ! -d ${MOUNTPOINT} ]]; then
-	LOGGERMASSAGE 0 "Error: No mount point found, kindly check"
-	QUIT 1
+  mkdir -p $MOUNTPOINT
+  if [[ ! -d ${MOUNTPOINT} ]]; then
+  	LOGGERMASSAGE 0 "Error: No mount point found, kindly check"
+  	QUIT 1
+  fi
+else
+  MOUNTEXIST="true"
 fi
 
 ### check if nfs allrady moundet if not mount
@@ -241,6 +250,12 @@ fi
 if [[ $MOUNDET != "allrady"  ]]; then
   LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
 	umount $MOUNTPOINT
+  if [[ $? -eq 0 ]]; then
+    if [[ -z MOUNTEXIST ]]; then
+      LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
+      rm -rf $MOUNTPOINT
+    fi
+  fi
 fi
 
 ### YIPPI we are finished

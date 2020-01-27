@@ -1,6 +1,6 @@
 ## XCP-ng Server VM Backup
 
-This is a simple bash/shell script to backup running virtual machines on XCP-ng Servers. This script takes backup of virtual machine and store backup on NFS server.
+This is a solid handcraft bash script to backup running virtual machines on XCP-ng Servers. This script takes backup of all virtual machine and exports them on NFS Server. You can specify how many backups are keep.
 
 ## How to Use Script
 
@@ -9,14 +9,40 @@ Download this script and modify some parameters as per your network and director
 - MOUNTPOINT=/mnt/nfs   ## change this with your system mount point
 - NFS_SERVER_IP="192.168.10.100"   ## IP of your NFS server.
 - FILE_LOCATION_ON_NFS="/remote/nfs/location"  ## Location to store backups on NFS server.
-- MAXBACKUPS=2 ## Deletes old backups
-- LOGLEVEL=0 ## 0=only start and exit / 1=every action
-- SYSLOGER="true" ## If "true" also writes in the system logs
+
+If you like to keep more or less then 2 backups than change this:
+
+- MAXBACKUPS=2
 
 Now execute the script from command line
 
 > $ ./xcpvmbackup.sh
 
-You may also schedule this with crontab to run as per backup frequency.
+For an automatic backup copy the script to one of this:
+/etc/cron.daily or /etc/cron.weekly or cron.monthly
 
-> 0 2 * * * /bin/sh xcpvmbackup.sh
+If you want to have more than one backup loop. Then modify in the scriptcopys in /etc/cron.* :
+
+* XSNAME=$(echo $HOSTNAME) to like this:
+
+- XSNAME=$(echo $HOSTNAME-daily)
+- XSNAME=$(echo $HOSTNAME-weekly)
+- XSNAME=$(echo $HOSTNAME-monthly)
+
+## Good to know:
+
+There are 3 loglevel
+
+* Loglevel 0=Only Errors
+* Loglevel 1=start and exit and Errors
+* Loglevel 2=every action
+
+This will change it:
+
+- LOGLEVEL="1"
+
+You can send the Log to your Email with mailx - make sure it is configured, test it befor with:
+> echo "bash testmail" | mail -s "testmail from bash" "your@email.com"
+
+- LOGMAIL="true"
+- MAILADRESS="your@email.com" ### if not set send mail to $USER

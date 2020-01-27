@@ -36,7 +36,7 @@ SYSLOGER="true"
 
 ### int. Variablen
 
-XSNAME=`echo $HOSTNAME`
+XSNAME=$(echo $HOSTNAME)
 DATE=$(date +%d-%m-%Y)-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
 UUIDFILE=$(mktemp /tmp/uuids.XXXXXXXXX)
 MAILFILE=$(mktemp /tmp/mail.XXXXXXXXX)
@@ -236,8 +236,6 @@ if [[ -z "$EXPORTERROR" ]]; then
 else
       LOGGERMASSAGE 0 "Error: Do not remove old Backups becouse a error in the new backup"
 fi
-
-
 
 # unmount if not befor for the script moundet
 if [[ $MOUNDET != "allrady"  ]]; then

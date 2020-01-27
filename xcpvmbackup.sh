@@ -256,7 +256,7 @@ if [[ $MOUNDET != "allrady"  ]]; then
       rm -rf $MOUNTPOINT
     fi
   else
-  LOGGERMASSAGE "Error: $MESSAGE"
+  LOGGERMASSAGE 0 "Error: $MESSAGE"
   fi
 fi
 

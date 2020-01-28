@@ -90,7 +90,7 @@ Import with xe vm-import:
 
 Was gpg used:
 you must extra import the Secred-Key on the new system:
-> gpg2 --import /root/enrico-pub.asc
+> gpg2 --import gpg-secred-key.asc
 
 after this you import with gpg and xe vm-import
 > gpg2 --decrypt /mnt/nfs/old-server-name/backupdate/vm-name.xva | xe vm-import force=true preserve=true filename=/dev/stdin

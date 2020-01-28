@@ -54,7 +54,9 @@ You can send the Log to your Email with mailx - make sure it is configured, test
 
 The user of the script needs the rights to:
 
-* to run "$ xe *"
+* to run '$ xe vm-snapshot'
+* to run '$ xe vm-export'
+* to run '$ xe vm-uninstall'
 * create directories under /mnt/
 
 ### Backupspace

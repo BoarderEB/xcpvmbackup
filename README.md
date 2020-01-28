@@ -1,4 +1,4 @@
-## XCP-ng Server VM Backup
+# XCP-ng Server VM Backup
 
 This is a solid handcraft bash script to backup running virtual machines on XCP-ng Servers. This script takes backup of all virtual machine and exports them on NFS Server. You can specify how many backups are keep.
 
@@ -17,7 +17,7 @@ Now execute the script from command line
 
 > $ ./xcpvmbackup.sh
 
-# Cron-Backup
+### Cron-Backup
 
 For an automatic backup copy the script to one of this:
 /etc/cron.daily or /etc/cron.weekly or /etc/cron.monthly
@@ -32,7 +32,7 @@ If you want to have more than one backup loop. Then modify in the scriptcopys in
 
 ## Good to know:
 
-# There are 3 loglevel
+### There are 3 loglevel
 
 * Loglevel 0=Only Errors
 * Loglevel 1=start and exit and Errors
@@ -42,7 +42,7 @@ This will change it:
 
 - LOGLEVEL="1"
 
-# E-Mail notification
+### E-Mail notification
 
 You can send the Log to your Email with mailx - make sure it is configured, test it befor with:
 > echo "bash testmail" | mail -s "testmail from bash" "your@email.com"
@@ -50,6 +50,6 @@ You can send the Log to your Email with mailx - make sure it is configured, test
 - LOGMAIL="true"
 - MAILADRESS="your@email.com" ### if not set send mail to $USER
 
-# Backupspace
+### Backupspace
 
 The script tests before the backup if there is enough space on the nfs server. Because the size of the backup is not known before the backups, the maximum size of every VM is tested.

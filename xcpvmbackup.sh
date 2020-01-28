@@ -227,7 +227,7 @@ do
     if [[ $GPG -eq "true" ]]; then
         if [[ $(TESTGPG) == "true" ]]; then
           LOGGERMASSAGE "export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
-          xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.asc"
+          xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
         else
           LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
           EXPORTERROR="true"

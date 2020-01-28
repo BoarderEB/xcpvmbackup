@@ -94,4 +94,4 @@ you must extra import the secred-key on the new system:
 > gpg2 --import gpg-secred-key.asc
 
 after this you import with gpg and xe vm-import
-> gpg2 --decrypt /mnt/nfs/old-server-name/backupdate/vm-name.xva | xe vm-import force=true preserve=true filename=/dev/stdin
+> gpg2 --decrypt /mnt/nfs/old-server-name/backupdate/vm-name.xva.gpg | xe vm-import force=true preserve=true filename=/dev/stdin

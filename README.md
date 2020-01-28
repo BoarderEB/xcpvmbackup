@@ -1,6 +1,6 @@
 # XCP-ng Server VM Backup
 
-This is a solid handcraft bash script to backup running virtual machines on XCP-ng Servers. This script takes backup of all virtual machine and exports them on NFS Server. You can specify how many backups are keep.
+This is a solid handcraft bash script to backup running virtual machines on XCP-ng Servers. This script takes backup of all virtual machine and exports - also PGP-Encoding - on NFS Server. You can specify how many backups are keep.
 
 ## How to Use Script
 
@@ -42,7 +42,9 @@ This will change it:
 
 - LOGLEVEL="1"
 
-### GPG encoding
+### PGP encoding
+
+For PGP encoding on xcp-ng are used gpg.
 
 Make shure the you pgp-public-key is importet in the xcp-server
 > gpg2 --import gpg-pub-key.asc
@@ -88,7 +90,7 @@ Mount nfs server:
 Import with xe vm-import:
 > xe vm-import force=true preserve=true filename=/mnt/nfs/old-server-name/backupdate/vm-name.xva
 
-### Was GPG used:
+### Was PGP used:
 
 you must extra import the secred-key on the new system:
 > gpg2 --import gpg-secred-key.asc

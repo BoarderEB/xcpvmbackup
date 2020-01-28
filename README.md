@@ -44,6 +44,9 @@ This will change it:
 
 ### GPG encoding
 
+Make shure the you pgp-public-key is importet in the xcp-server
+> gpg2 --import gpg-pub-key.asc
+
 If you like to export the vm encoding with GPG you must set this:
   - GPG="true"
 
@@ -52,15 +55,6 @@ Also you must set the GPG-Key-ID or the Name of the key to be used for encryptio
 
 if you only imported 1 gpg-public-key on the system, you find the key-id with this:
 > gpg2 --list-public-keys --keyid-format LONG | grep 'pub ' | cut -d' ' -f4 | cut -d'/' -f2
-
-make shure the you pgp-public-key is importet in the xcp-server
-> gpg2 --import gpg-pub-key.asc
-
-if you like to test in this system import and export you neet also do import the secret-keys
-> gpg2 --import gpg-secret-key.asc
-
-for short import - export gpg test:
-> echo "YES GPG WORKS" | gpg2 --encrypt -a --recipient KEY-ID_or_Name --trust-model always | gpg2 --decrypt
 
 ### E-Mail notification
 

@@ -54,7 +54,7 @@ You can send the Log to your Email with mailx - make sure it is configured, test
 
 The user of the script needs the rights to:
 
-* to run "$ xe vm"
+* to run "$ xe *"
 * create directories under /mnt/
 
 ### Backupspace

@@ -25,6 +25,20 @@ MAXBACKUPS="2"
 LOGLEVEL="1"
 SYSLOGER="true"
 
+### GPG
+### make shure the you pgp-public-key is importet in the xcp-server
+### gpg2 --import gpg-pub-key.asc
+### if you like to test in this system import and export you neet also do import the secret-keys
+### gpg2 --import gpg-secret-key.asc
+### for import - export test:
+### $ echo "YES GPG WORKS" | gpg2 --encrypt -a --recipient KEY-ID_or_Name --trust-model always | gpg2 --decrypt
+
+#GPG="true"
+
+### if you only imported 1 gpg-public-key on the system, you find the key-id with this:
+### $ gpg2 --list-public-keys --keyid-format LONG | grep 'pub ' | cut -d' ' -f4 | cut -d'/' -f2
+#GPGID="key-id or Name"
+
 ### Send Log-Email with mailx - make sure it is configured:
 ### echo "bash testmail" | mail -s "testmail from bash" "your@email.com"
 #LOGMAIL="true"
@@ -136,6 +150,20 @@ function FREESPACE() {
   fi
 }
 
+function TESTGPG() {
+  if [[ $GPG -eq "true" ]]; then
+    if [[ ! -z $GPGID ]]; then
+      gpg2 --list-public-keys "$GPGID" >> /dev/null
+      if [[ $? -ne 0 ]]; then
+        LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found"
+        echo "false"
+      else
+        echo "true"
+      fi
+    fi
+  fi
+}
+
 LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
@@ -196,8 +224,18 @@ do
       EXPORTERROR="true"
     fi
 
-  	LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
-  	xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
+    if [[ $GPG -eq "true" ]]; then
+        if [[ $(TESTGPG) == "true" ]]; then
+          LOGGERMASSAGE "export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
+          xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.asc"
+        else
+          LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
+          EXPORTERROR="true"
+        fi
+    else
+      LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
+      xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
+    fi
     if [[ $? -ne 0 ]]; then
       LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME to $BACKUPPATH  - see xcp-syslog"
       EXPORTERROR="true"
@@ -259,4 +297,9 @@ fi
 
 ### YIPPI we are finished
 LOGGERMASSAGE 1 "$0: Xen Server VM Backup finished"
+
+if [[ -z "$EXPORTERROR" ]]; then
+  QUIT 1
+fi
+
 QUIT 0

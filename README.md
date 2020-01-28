@@ -88,7 +88,7 @@ Mount nfs server:
 Import with xe vm-import:
 > xe vm-import force=true preserve=true filename=/mnt/nfs/old-server-name/backupdate/vm-name.xva
 
-### Was gpg used:
+### Was GPG used:
 
 you must extra import the secred-key on the new system:
 > gpg2 --import gpg-secred-key.asc

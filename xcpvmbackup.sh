@@ -36,7 +36,8 @@ SYSLOGER="true"
 ### for import - export test:
 ### $ echo "YES GPG WORKS" | gpg2 --encrypt -a --recipient KEY-ID_or_Name --trust-model always | gpg2 --decrypt
 
-GPG="false"
+#GPG="true"
+
 ### if you only imported 1 gpg-public-key on the system, you find the key-id with this:
 ### $ gpg2 --list-public-keys --keyid-format LONG | grep 'pub ' | cut -d' ' -f4 | cut -d'/' -f2
 #GPGID="key-id or Name"

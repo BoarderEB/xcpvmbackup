@@ -47,7 +47,7 @@ This will change it:
 If you like to export the vm encoding with GPG you must set this:
   - GPG="true"
 
-And alos set the GPG-Key-ID of the key to be used for encryption.
+Also you must set the GPG-Key-ID or the Name of the key to be used for encryption.
   - GPGID="key-id or Name"
 
 if you only imported 1 gpg-public-key on the system, you find the key-id with this:
@@ -59,7 +59,7 @@ make shure the you pgp-public-key is importet in the xcp-server
 if you like to test in this system import and export you neet also do import the secret-keys
 > gpg2 --import gpg-secret-key.asc
 
-for import - export test:
+for short import - export gpg test:
 > echo "YES GPG WORKS" | gpg2 --encrypt -a --recipient KEY-ID_or_Name --trust-model always | gpg2 --decrypt
 
 ### E-Mail notification

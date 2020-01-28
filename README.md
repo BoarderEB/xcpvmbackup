@@ -1,6 +1,6 @@
 # XCP-ng Server VM Backup
 
-This is a solid handcraft bash script to backup running virtual machines on XCP-ng Servers. This script takes backup of all virtual machine and exports - also PGP-Encoding - on NFS Server. You can specify how many backups are keep.
+This is a solid handcraft bash script to backup running virtual machines on XCP-ng Servers. This script takes backup of all virtual machine and exports - also with PGP-Encoding - on NFS Server. You can specify how many backups are keep.
 
 ## How to Use Script
 

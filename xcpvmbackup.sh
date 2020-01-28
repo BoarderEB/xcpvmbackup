@@ -25,6 +25,9 @@ MAXBACKUPS="2"
 LOGLEVEL="1"
 SYSLOGER="true"
 
+### Set SysLoggerPath if not "logger"
+#SYSLOGGERPATH="/usr/bin/logger"
+
 ### GPG
 ### make shure the you pgp-public-key is importet in the xcp-server
 ### gpg2 --import gpg-pub-key.asc
@@ -33,8 +36,7 @@ SYSLOGER="true"
 ### for import - export test:
 ### $ echo "YES GPG WORKS" | gpg2 --encrypt -a --recipient KEY-ID_or_Name --trust-model always | gpg2 --decrypt
 
-#GPG="true"
-
+GPG="false"
 ### if you only imported 1 gpg-public-key on the system, you find the key-id with this:
 ### $ gpg2 --list-public-keys --keyid-format LONG | grep 'pub ' | cut -d' ' -f4 | cut -d'/' -f2
 #GPGID="key-id or Name"
@@ -43,9 +45,6 @@ SYSLOGER="true"
 ### echo "bash testmail" | mail -s "testmail from bash" "your@email.com"
 #LOGMAIL="true"
 #MAILADRESS="your@email.com" ### if not set send mail to $USER
-
-####Set SysLoggerPath if not "logger"
-#SYSLOGGERPATH="/usr/bin/logger"
 
 ### int. Variablen
 

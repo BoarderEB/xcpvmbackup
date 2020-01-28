@@ -45,3 +45,5 @@ You can send the Log to your Email with mailx - make sure it is configured, test
 
 - LOGMAIL="true"
 - MAILADRESS="your@email.com" ### if not set send mail to $USER
+
+The script tests before the backup if there is enough space on the nfs server. Because the size of the backup is not known before the backups, the maximum size of every VM is tested.

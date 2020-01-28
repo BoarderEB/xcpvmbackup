@@ -76,3 +76,21 @@ The user of the script needs the rights to:
 ### Backupspace
 
 The script tests before the backup if there is enough space on the nfs server. Because the size of the backup is not known before the backups, the maximum size of every VM is tested.
+
+## Restore Backup:
+
+create mountpoint:
+> mkdir /mnt/nfs
+
+mount nfs server:
+> mount -t nfs 192.168.10.100:/remote/nfs/location /mnt/nfs
+
+Import with xe vm-import:
+> xe vm-import force=true preserve=true filename=/mnt/nfs/old-server-name/backupdate/vm-name.xva
+
+Was gpg used:
+you must extra import the Secred-Key on the new system:
+> gpg2 --import /root/enrico-pub.asc
+
+after this you import with gpg and xe vm-import
+> gpg2 --decrypt /mnt/nfs/old-server-name/backupdate/vm-name.xva | xe vm-import force=true preserve=true filename=/dev/stdin

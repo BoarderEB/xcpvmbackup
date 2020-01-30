@@ -168,7 +168,7 @@ function FREESPACE() {
   fi
 
  if [[ "$1" == "-n" ]]; then
-        local DISKLIST=100
+        local DISKLIST=0
  else
         local DISKLIST=$(xe vm-disk-list vm=$UUID vdi-params=virtual-size | grep "virtual-size" | grep -oP "[0-9]+$" )
  fi
@@ -230,6 +230,15 @@ function SNAPREMOVE() {
   fi
 }
 
+## safe all PID FORM PARALEL xe vm-export to $PIDLIST
+function VMEXPPID() {
+  if [[ -z $PIDLIST ]]; then
+    PIDLIST="$1"
+  else
+    PIDLIST="$PIDLIST,$1"
+  fi
+}
+
 LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
@@ -283,8 +292,11 @@ do
 done <<< "$VMUUIDS"
 
 ### if not enough space for all vm in maximum together do normal run
+if [[ $PARALEL == "true" ]]; then
 if [[ $(FREESPACE -n $MOUNTPOINT $DISKSPACE) == "false" ]]; then
+  LOGGERMASSAGE 0 "Error: Not enough space vm in maximum together on $MOUNTPOINT - no paralel run"
   PARALEL="false"
+fi
 fi
 
 ### start snapshot and export
@@ -305,6 +317,8 @@ do
         if [[ $(TESTGPG) == "true" ]]; then
           LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
           xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg" &
+          PID=$(ps ax | grep "xe vm-export vm=${SNAPUUID}" | grep -v "grep" | cut -d" " -f1)
+          VMEXPPID $PID
         else
           LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
           EXPORTERROR="true"
@@ -312,6 +326,7 @@ do
     else
       LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME to $BACKUPPATH"
       xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva" &
+      VMEXPPID $!
     fi
   fi
 
@@ -379,6 +394,35 @@ while true; do
   fi
   sleep 100
 done
+
+### Test if there a xe vm-export error
+if [[ ! -z $PIDLIST ]]; then
+  IFS=,
+  for PID in $PIDLIST;
+  do
+    while true; do
+      PSPID=$(ps aux | grep "$PID" | grep -v "grep")
+      if [[ -z $PSPID ]]; then
+        break
+      fi
+      echo "$PID running"
+      sleep 3
+    done
+    wait $PID
+    if [[ $? -ne 0 ]]; then
+      LOGGERMASSAGE 0 "Error: Paralel run: When export snapshoot - see xcp-syslog"
+      EXPORTERROR="true"
+    else
+      PARALELEXIT="OK"
+    fi
+  done
+fi
+
+if [[ $PARALELEXIT == "OK" ]]; then
+  if [[ -z $EXPORTERROR ]]; then
+    LOGGERMASSAGE "Paralel run: Export of vm successfully"
+  fi
+fi
 
 ### Remove old Backups
 if [[ -z "$EXPORTERROR" ]]; then

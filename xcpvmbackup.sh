@@ -17,7 +17,9 @@
 NFS_SERVER_IP="192.168.10.100"
 FILE_LOCATION_ON_NFS="/remote/nfs/location"
 MAXBACKUPS="2"
+
 PARALEL="true"
+#MAXPARALEL="2"
 
 ### Loglevel 0=Only Errors
 ### Loglevel 1=start and exit and Errors
@@ -193,9 +195,18 @@ function FREESPACE() {
 function PARALELRUN() {
   local PARALELRUNS=$(ps --forest -o pid=,tty=,stat=,time=,cmd= -g $(ps -o sid= -p $$) | grep "xe vm-export vm=" | grep -v "grep")
   if [[ -z ${PARALELRUNS} ]]; then
-    echo "false"
+    if [[ $1 == "-c" ]]; then
+        echo "0"
+    else
+        echo "false"
+    fi
   else
+    if [[ $1 == "-c" ]]; then
+        local COUNT=$(ps --forest -o pid=,tty=,stat=,time=,cmd= -g $(ps -o sid= -p $$) | grep "xe vm-export vm=" | grep -v "grep" | wc -l)
+        echo "$COUNT"
+    else
     echo "true"
+    fi
   fi
 }
 
@@ -305,6 +316,18 @@ do
   VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
 
   if [[ $PARALEL == "true" ]]; then
+
+    ### check if maximum number on paralel runs is reached
+    if [[ ! -z $MAXPARALEL ]]; then
+      while true; do
+        if [[ $(PARALELRUN -c) -ge $MAXPARALEL ]]; then
+          sleep 100
+        else
+          break
+        fi
+      done
+    fi
+
     LOGGERMASSAGE "Paralel run: create snapshoot from: $VMNAME"
     SNAPUUID=$(xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE")
     xe template-param-set is-a-template=false ha-always-run=false uuid=$SNAPUUID
@@ -317,8 +340,7 @@ do
         if [[ $(TESTGPG) == "true" ]]; then
           LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
           xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg" &
-          PID=$(ps ax | grep "xe vm-export vm=${SNAPUUID}" | grep -v "grep" | cut -d" " -f1)
-          VMEXPPID $PID
+          VMEXPPID $(ps ax | grep "xe vm-export vm=${SNAPUUID}" | grep -v "grep" | cut -d" " -f1)
         else
           LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
           EXPORTERROR="true"
@@ -405,7 +427,6 @@ if [[ ! -z $PIDLIST ]]; then
       if [[ -z $PSPID ]]; then
         break
       fi
-      echo "$PID running"
       sleep 3
     done
     wait $PID
@@ -418,9 +439,14 @@ if [[ ! -z $PIDLIST ]]; then
   done
 fi
 
-if [[ $PARALELEXIT == "OK" ]]; then
-  if [[ -z $EXPORTERROR ]]; then
-    LOGGERMASSAGE "Paralel run: Export of vm successfully"
+### THERE is A BUG IN xe vm-export if export to filename= | stdout
+### that also exit 0 if the process is not finished fine
+### becouse this better no LOGMASSAGE Export successfully
+if [[ $GPG != "true" ]]; then
+  if [[ $PARALELEXIT == "OK" ]]; then
+    if [[ -z $EXPORTERROR ]]; then
+      LOGGERMASSAGE "Paralel run: Export of vm successfully"
+    fi
   fi
 fi
 

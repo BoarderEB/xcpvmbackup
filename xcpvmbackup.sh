@@ -18,7 +18,9 @@ NFS_SERVER_IP="192.168.10.100"
 FILE_LOCATION_ON_NFS="/remote/nfs/location"
 MAXBACKUPS="2"
 
+### For Parallel run the export
 PARALEL="true"
+### Limit for maximum number of parallel runs
 #MAXPARALEL="2"
 
 ### Loglevel 0=Only Errors

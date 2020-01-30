@@ -215,7 +215,7 @@ fi
 while read VMUUID
 do
   VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
-  if [[ $(FREESPACE $VMUUID /mnt/nfsbackup) == "true" ]]; then
+  if [[ $(FREESPACE $VMUUID $MOUNTPOINT) == "true" ]]; then
     LOGGERMASSAGE "create snapshoot from: $VMNAME"
     SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
     xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}

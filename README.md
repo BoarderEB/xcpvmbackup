@@ -58,16 +58,20 @@ Also you must set the GPG-Key-ID or the Name of the key to be used for encryptio
 if you only imported 1 gpg-public-key on the system, you find the key-id with this:
 > gpg2 --list-public-keys --keyid-format LONG | grep 'pub ' | cut -d' ' -f4 | cut -d'/' -f2
 
-**Warning: There is currently a bug in XCP-NG. It is currently not possible to test whether export was successful. Therefore there is no error message in Mail-Log and Systemlog**
+**Warning: There is currently a bug in XCP-NG. It is currently not possible to test whether export was successful. Therefore there is no error message by on-the-fly pgp-encoding in Mail-Log and Systemlog**
+
+**There are some test before export. To make sure it should work. But there is no guarantee that it was successful.**
 
 ### Parallel Run
 PGP always uses only one processor core. With very large VMs, it can take a long time for the backup to go through.
 This means that the speed with parallel Run of several VMs increases dramatically.
 
+If an error is found, there is a fallback to the sequential backup.
+
 For Parallel
 - PARALEL="true"
 
-Limit the maximum number of parallel export runs. Which is also the maximum number of CPU cores used.
+Limit the maximum number of parallel vm export runs. Which is also the maximum number of CPU cores used by PGP-Encoding.
 - MAXPARALEL="2"
 
 ### E-Mail notification
@@ -90,6 +94,8 @@ The user of the script needs the rights to:
 ### Backupspace
 
 The script tests before the backup if there is enough space on the nfs server. Because the size of the backup is not known before the backups, the maximum size of every VM is tested.
+
+With parallel export, the total size of all VMs is tested. If there is not en space for this on the NFS server. If there is not enough space on the NFS server for this. There is a fall back on sequentiell export.
 
 ## Restore Backup:
 

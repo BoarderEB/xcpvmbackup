@@ -40,7 +40,7 @@ If you want to have more than one backup loop. Then modify in the scriptcopys in
 
 This will change it:
 
-- LOGLEVEL="1"
+- LOGLEVEL="2"
 
 ### PGP encoding
 

@@ -117,6 +117,7 @@ function MAILTO() {
 ### QUIT 0 = exit 0
 
 function QUIT() {
+  REMOVEMOUNT
   SNAPREMOVE
   MAILTO
   rm $MAILFILE
@@ -252,6 +253,22 @@ function VMEXPPID() {
   fi
 }
 
+function REMOVEMOUNT() {
+  # unmount if not befor for the script moundet
+  if [[ $MOUNDET != "allrady"  ]]; then
+    LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
+  	umount $MOUNTPOINT
+    if [[ $? -eq 0 ]]; then
+      if [[ ! -z MOUNTEXIST ]]; then
+        LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
+        rm -rf $MOUNTPOINT
+      fi
+    else
+      LOGGERMASSAGE 0 "Error: could not umount $MOUNTPOINT because of that not deleted"
+    fi
+  fi
+}
+
 LOGGERMASSAGE 1 "start Xen Server VM Backup"
 
 ### Create mount point
@@ -316,12 +333,6 @@ fi
 while IFS= read -r VMUUID
 do
   VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
-<<<<<<< HEAD
-  if [[ $(FREESPACE $VMUUID $MOUNTPOINT) == "true" ]]; then
-    LOGGERMASSAGE "create snapshoot from: $VMNAME"
-    SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
-    xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
-=======
 
   if [[ $PARALEL == "true" ]]; then
 
@@ -339,7 +350,6 @@ do
     LOGGERMASSAGE "Paralel run: create snapshoot from: $VMNAME"
     SNAPUUID=$(xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE")
     xe template-param-set is-a-template=false ha-always-run=false uuid=$SNAPUUID
->>>>>>> paralel
     if [[ $? -ne 0 ]]; then
       LOGGERMASSAGE 0 "Error: Paralel run - When create snapshoot from: $VMNAME  - see xcp-syslog"
       PARALELEROROR="true"
@@ -487,19 +497,6 @@ else
   LOGGERMASSAGE 0 "Error: Do not remove old Backups becouse a error in the new backup"
 fi
 
-# unmount if not befor for the script moundet
-if [[ $MOUNDET != "allrady"  ]]; then
-  LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
-	umount $MOUNTPOINT
-  if [[ $? -eq 0 ]]; then
-    if [[ ! -z MOUNTEXIST ]]; then
-      LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
-      rm -rf $MOUNTPOINT
-    fi
-  else
-    LOGGERMASSAGE 0 "Error: could not umount $MOUNTPOINT because of that not deleted"
-  fi
-fi
 
 ### YIPPI we are finished
 

@@ -79,7 +79,7 @@ function SYSLOGGER() {
 }
 
 function LOGGERMASSAGE() {
-  local TIME = $(date +'%H:%M')
+  local TIME=$(date +'%H:%M')
   local NUMBER='^[0-9]+$'
   if [[ $1 =~ $NUMBER ]]; then
     local LOGGERMASSAGELEVEL="$1"

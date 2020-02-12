@@ -79,8 +79,9 @@ function SYSLOGGER() {
 }
 
 function LOGGERMASSAGE() {
-  local number='^[0-9]+$'
-  if [[ $1 =~ $number ]]; then
+  local TIME = $(date +'%H:%M')
+  local NUMBER='^[0-9]+$'
+  if [[ $1 =~ $NUMBER ]]; then
     local LOGGERMASSAGELEVEL="$1"
     local LOGGERMASSAGE="$2"
   else
@@ -89,7 +90,7 @@ function LOGGERMASSAGE() {
   fi
   if [[ $LOGGERMASSAGELEVEL -le $LOGLEVEL ]]; then
     echo $0: $LOGGERMASSAGE
-    echo $0: $LOGGERMASSAGE >> $MAILFILE
+    echo $TIME: $0:  $LOGGERMASSAGE >> $MAILFILE
     SYSLOGGER "$0: $LOGGERMASSAGE"
     fi
 }

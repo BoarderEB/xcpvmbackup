@@ -23,8 +23,8 @@ PARALEL="true"
 ### Limit for maximum number of parallel runs
 #MAXPARALEL="2"
 
-### Loglevel 0=Only Errors
-### Loglevel 1=start and exit and Errors
+### Loglevel 0=only Errors
+### Loglevel 1=start, exit, warn and errors
 ### Loglevel 2=every action
 
 LOGLEVEL="2"
@@ -325,7 +325,7 @@ done <<< "$VMUUIDS"
 ### if not enough space for all vm in maximum together do normal run
 if [[ $PARALEL == "true" ]]; then
 if [[ $(FREESPACE -n $MOUNTPOINT $DISKSPACE) == "false" ]]; then
-  LOGGERMASSAGE 0 "Error: Not enough space vm in maximum together on $MOUNTPOINT - no paralel run"
+  LOGGERMASSAGE 1 "Warn: Not enough space for all vm in maximum together on $MOUNTPOINT - go on in sequential run"
   PARALEL="false"
 fi
 fi

@@ -34,8 +34,8 @@ If you want to have more than one backup loop. Then modify in the scriptcopys in
 
 ### There are 3 loglevel
 
-* Loglevel 0=Only Errors
-* Loglevel 1=start and exit and Errors
+* Loglevel 0=only Errors
+* Loglevel 1=start, exit, warn and error
 * Loglevel 2=every action
 
 This will change it:

@@ -54,7 +54,7 @@ SYSLOGER="true"
 
 ### int. Variablen
 
-XSNAME=$(echo $HOSTNAME)
+XSNAME=$(echo "$HOSTNAME")
 INTRANDOME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
 MOUNTPOINT=$(echo "/mnt/xcpvmbackup")-$(echo $INTRANDOME)
 DATE=$(date +%d-%m-%Y)-$(echo $INTRANDOME)

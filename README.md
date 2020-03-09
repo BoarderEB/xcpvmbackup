@@ -24,11 +24,11 @@ For an automatic backup copy the script to one of this:
 
 If you want to have more than one backup loop. Then modify in the scriptcopys in /etc/cron.* :
 
-* XSNAME=$(echo $HOSTNAME) to like this:
+* XSNAME=$(echo "$HOSTNAME") to like this:
 
-- XSNAME=$(echo $HOSTNAME-daily)
-- XSNAME=$(echo $HOSTNAME-weekly)
-- XSNAME=$(echo $HOSTNAME-monthly)
+- XSNAME=$(echo "$HOSTNAME-daily")
+- XSNAME=$(echo "$HOSTNAME-weekly")
+- XSNAME=$(echo "$HOSTNAME-monthly")
 
 ## Good to know:
 

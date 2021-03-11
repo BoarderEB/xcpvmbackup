@@ -58,10 +58,6 @@ Also you must set the GPG-Key-ID or the Name of the key to be used for encryptio
 if you only imported 1 gpg-public-key on the system, you find the key-id with this:
 > gpg2 --list-public-keys --keyid-format LONG | grep 'pub ' | cut -d' ' -f4 | cut -d'/' -f2
 
-**Warning: There is currently a bug in XCP-NG. It is currently not possible to test whether export was successful. Therefore there is no error message by on-the-fly pgp-encoding in Mail-Log and Systemlog**
-
-**There are some test before the export. To make sure it should work. But there is no guarantee that it was successful.**
-
 ### Parallel Run
 PGP always uses only one processor core. With very large VMs, it can take a long time for the backup to go through.
 This means that the speed with parallel Run of several VMs increases dramatically.

@@ -231,7 +231,7 @@ function TESTGPG() {
 
 ### remove all SNAPSHOTS FROM THIS BACKUP
 function SNAPREMOVE() {
-  local SNAPTOREMOVE=$(xe vm-list is-control-domain=false is-a-snapshot=true | grep $INTRANDOME | cut -d":" -f2 | cut -d" " -f2)
+  local SNAPTOREMOVE=$(xe vm-list is-control-domain=false is-a-snapshot=true | grep $INTRANDOME | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g')
   if [[ ! -z $SNAPTOREMOVE ]]; then
     while IFS= read -r NAME
     do
@@ -310,7 +310,7 @@ if [[ ! -d ${BACKUPPATH} ]]; then
 fi
 
 ### Fetching list UUIDs of all VMs running on XenServer
-VMUUIDS=$(xe vm-list is-control-domain=false is-a-snapshot=false | grep uuid | cut -d":" -f2 | cut -d" " -f2)
+VMUUIDS=$(xe vm-list is-control-domain=false is-a-snapshot=false | grep uuid | sed 's/\s*[u][u][i][d]\s*[(]\s*[R][O]\s*[)]\s*[:]\s*//g')
 if [[ -z ${VMUUIDS} ]]; then
 	LOGGERMASSAGE 0 "Error: NO VM found for backup"
 	QUIT 1
@@ -333,7 +333,7 @@ fi
 ### start snapshot and export
 while IFS= read -r VMUUID
 do
-  VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | cut -d":" -f2 | sed 's/^ *//g'`
+  VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g'`
 
   if [[ $PARALEL == "true" ]]; then
 
@@ -383,7 +383,7 @@ do
       sleep 100
     done
 ### and remove all snapshots from parallel run
-    SNAPTOREMOVE=$(xe vm-list is-control-domain=false is-a-snapshot=true | grep $INTRANDOME | cut -d":" -f2)
+    SNAPTOREMOVE=$(xe vm-list is-control-domain=false is-a-snapshot=true | grep $INTRANDOME | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g')
     while IFS= read -r NAME
     do
       xe vm-uninstall vm=${NAME} force=true

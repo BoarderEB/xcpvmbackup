@@ -96,7 +96,7 @@ The user of the script needs the rights to:
 
 The script tests before the backup if there is enough space on the nfs server. Because the size of the backup is not known before the backups, the maximum size of every VM is tested.
 
-With parallel export, the total size of all VMs is tested. If there is not en space for this on the NFS server. If there is not enough space on the NFS server for this. There is a fall back on sequentiell export.
+With parallel export, the total size of all VMs together is tested. If there is not enough space on the NFS server for this. There is a fall back on sequentiell export.
 
 ## Restore Backup:
 

@@ -359,7 +359,12 @@ do
     if [[ $GPG == "true" ]]; then
         if [[ $(TESTGPG) == "true" ]]; then
           LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
-          xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg" &
+          {
+            xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+            if [[ ${PIPESTATUS[0]} != 0 ]]; then
+              GPGEXPORTERROR="true"
+            fi
+          } &
           VMEXPPID $(ps ax | grep "xe vm-export vm=${SNAPUUID}" | grep -v "grep" | cut -d" " -f1)
         else
           LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
@@ -459,16 +464,17 @@ if [[ ! -z $PIDLIST ]]; then
   done
 fi
 
-### THERE is A BUG IN xe vm-export if export to filename= | stdout
-### that also exit 0 if the process is not finished fine
-### becouse this better no LOGMASSAGE Export successfully
-if [[ $GPG != "true" ]]; then
-  if [[ $PARALELEXIT == "OK" ]]; then
-    if [[ -z $EXPORTERROR ]]; then
-      LOGGERMASSAGE "Paralel run: Export of vm successfully"
-    fi
+if [[ -z $GPGEXPORTERROR ]]; then
+      LOGGERMASSAGE 0 "Error: Paralel run: When export snapshoot gpg encodet - see xcp-syslog"
+      EXPORTERROR="true"
+fi
+
+if [[ $PARALELEXIT == "OK" ]]; then
+  if [[ -z $EXPORTERROR ]]; then
+    LOGGERMASSAGE "Paralel run: Export of vm successfully"
   fi
 fi
+
 
 ### Remove old Backups
 if [[ -z "$EXPORTERROR" ]]; then

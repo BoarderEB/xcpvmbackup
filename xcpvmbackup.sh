@@ -464,7 +464,7 @@ if [[ ! -z $PIDLIST ]]; then
   done
 fi
 
-if [[ -z $GPGEXPORTERROR ]]; then
+if [[ ! -z $GPGEXPORTERROR ]]; then
       LOGGERMASSAGE 0 "Error: Paralel run: When export snapshoot gpg encodet - see xcp-syslog"
       EXPORTERROR="true"
 fi

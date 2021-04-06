@@ -507,7 +507,7 @@ fi
 
 ### YIPPI we are finished
 
-if [[ -z "$EXPORTERROR" ]]; then
+if [[ ! -z "$EXPORTERROR" ]]; then
   QUIT 1
 fi
 

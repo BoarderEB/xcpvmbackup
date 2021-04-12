@@ -396,7 +396,7 @@ do
   fi
   ### now go on in normal run
   if [[ $PARALEL != "true" ]]; then
-    if [[ $(FREESPACE $VMUUID $MOUNTPOINT) == "true" ]]; then
+    if [[ $(FREESPACE $VMUUID $MOUNTPOINT) != "true" ]]; then
       LOGGERMASSAGE "create snapshoot from: $VMNAME"
       SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
       xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
@@ -409,6 +409,9 @@ do
           if [[ $(TESTGPG) == "true" ]]; then
             LOGGERMASSAGE "export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
             xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+            if [[ ${PIPESTATUS[0]} != 0 ]]; then
+              GPGEXPORTERROR="true"
+            fi
           else
             LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
             EXPORTERROR="true"

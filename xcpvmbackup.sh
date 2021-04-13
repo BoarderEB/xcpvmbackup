@@ -52,6 +52,11 @@ SYSLOGER="true"
 #LOGMAIL="true"
 #MAILADRESS="your@email.com" ### if not set send mail to $USER
 
+### The free storage space is checked based on the total capacity of the VM. 
+### It can be useful to override this, if the used capacity of the VM is 
+### significantly less than the total capacity.
+#FREESPACECHECK="force"
+
 ### int. Variablen
 
 XSNAME=$(echo "$HOSTNAME")
@@ -397,6 +402,12 @@ do
   ### now go on in normal run
   if [[ $PARALEL != "true" ]]; then
     if [[ $(FREESPACE $VMUUID $MOUNTPOINT) != "true" ]]; then
+        if [[ "$FREESPACECHECK" == "force" ]]; then
+          LOGGERMASSAGE 1 "Warn: not enough space to export $VMNAME to $MOUNTPOINT but FREESPACECHECK is force. I go on with export."
+        fi
+    fi
+
+    if [[ $(FREESPACE $VMUUID $MOUNTPOINT) == "true" ]] || [[ "$FREESPACECHECK" == "force" ]] ; then
       LOGGERMASSAGE "create snapshoot from: $VMNAME"
       SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
       xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}

@@ -91,6 +91,8 @@ The user of the script needs the rights to:
 ### Backupspace
 
 The script tests before the backup if there is enough space on the nfs server. Because the size of the backup is not known before the backups, the maximum size of every VM is tested.
+It can be useful to override this, if the used capacity of the VM is significantly less than the total capacity. In the sequential export the free space check can be overwritten with:
+- FREESPACECHECK="force"
 
 With parallel export, the total size of all VMs together is tested. If there is not enough space on the NFS server for this. There is a fall back on sequentiell export.
 

@@ -62,7 +62,7 @@ SYSLOGER="true"
 XSNAME=$(echo "$HOSTNAME")
 INTRANDOME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
 MOUNTPOINT=$(echo "/mnt/xcpvmbackup")-$(echo $INTRANDOME)
-DATE=$(date +%d-%m-%Y)-$(echo $INTRANDOME)
+DATE=$(date +%d-%m-%Y)
 MAILFILE=$(mktemp /tmp/mail.XXXXXXXXX)
 
 ### LOGGERMASSAGE function
@@ -275,10 +275,10 @@ function REMOVEMOUNT() {
   fi
 }
 
-LOGGERMASSAGE 1 "start Xen Server VM Backup"
+LOGGERMASSAGE 1 "Start Xen Server VM Backup"
 
 ### Create mount point
-LOGGERMASSAGE "create mountpoint $MOUNTPOINT if not exist"
+LOGGERMASSAGE "Create mountpoint $MOUNTPOINT if not exist"
 
 if [[ ! -d ${MOUNTPOINT} ]]; then
   mkdir -p $MOUNTPOINT
@@ -307,7 +307,11 @@ fi
 
 ### creat backuppath if not exist
 BACKUPPATH="$MOUNTPOINT/$XSNAME/$DATE"
-LOGGERMASSAGE "create backuppath $BACKUPPATH if not exist"
+if [[ -d ${BACKUPPATH} ]]; then
+    LOGGERMASSAGE 1 "Warn: Create backuppath $BACKUPPATH already exists."
+    BACKUPPATH=$(echo "$MOUNTPOINT/$XSNAME/$DATE")-$(echo $INTRANDOME)
+fi
+LOGGERMASSAGE "Create backuppath $BACKUPPATH"
 mkdir -p $BACKUPPATH
 if [[ ! -d ${BACKUPPATH} ]]; then
 	LOGGERMASSAGE 0 "Error: No backup directory found"
@@ -317,7 +321,7 @@ fi
 ### Fetching list UUIDs of all VMs running on XenServer
 VMUUIDS=$(xe vm-list is-control-domain=false is-a-snapshot=false | grep uuid | sed 's/\s*[u][u][i][d]\s*[(]\s*[R][O]\s*[)]\s*[:]\s*//g')
 if [[ -z ${VMUUIDS} ]]; then
-	LOGGERMASSAGE 0 "Error: NO VM found for backup"
+	LOGGERMASSAGE 0 "Error: No VM found for backup"
 	QUIT 1
 fi
 
@@ -329,166 +333,168 @@ done <<< "$VMUUIDS"
 
 ### if not enough space for all vm in maximum together do normal run
 if [[ $PARALEL == "true" ]]; then
-if [[ $(FREESPACE -n $MOUNTPOINT $DISKSPACE) == "false" ]]; then
-  LOGGERMASSAGE 1 "Warn: Not enough space for all vm in maximum together on $MOUNTPOINT - go on in sequential run"
-  PARALEL="false"
-fi
-fi
-
-### start snapshot and export
-while IFS= read -r VMUUID
-do
-  VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g'`
-
-  if [[ $PARALEL == "true" ]]; then
-
-    ### check if maximum number on paralel runs is reached
-    if [[ ! -z $MAXPARALEL ]]; then
-      while true; do
-        if [[ $(PARALELRUN -c) -ge $MAXPARALEL ]]; then
-          sleep 100
-        else
-          break
-        fi
-      done
-    fi
-
-    LOGGERMASSAGE "Paralel run: create snapshoot from: $VMNAME"
-    SNAPUUID=$(xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE")
-    xe template-param-set is-a-template=false ha-always-run=false uuid=$SNAPUUID
-    if [[ $? -ne 0 ]]; then
-      LOGGERMASSAGE 0 "Error: Paralel run - When create snapshoot from: $VMNAME  - see xcp-syslog"
-      PARALELEROROR="true"
-    fi
-
-    if [[ $GPG == "true" ]]; then
-        if [[ $(TESTGPG) == "true" ]]; then
-          LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
-          {
-            xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
-            if [[ ${PIPESTATUS[0]} != 0 ]]; then
-              GPGEXPORTERROR="true"
-            fi
-          } &
-          VMEXPPID $(ps ax | grep "xe vm-export vm=${SNAPUUID}" | grep -v "grep" | cut -d" " -f1)
-        else
-          LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
-          EXPORTERROR="true"
-        fi
-    else
-      LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME to $BACKUPPATH"
-      xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva" &
-      VMEXPPID $!
-    fi
-  fi
-
-### if ther a parralel backup error:
-  if [[ ! -z ${PARALELEROROR} ]]; then
+  if [[ $(FREESPACE -n $MOUNTPOINT $DISKSPACE) == "false" ]]; then
+    LOGGERMASSAGE 1 "Warn: Not enough space for all vm in maximum together on $MOUNTPOINT - go on in sequential run"
     PARALEL="false"
-### wait until the last parallel run is finished
-    while true; do
-      if [[ $(PARALELRUN) != "true" ]]; then
-        break
-      fi
-      sleep 100
-    done
-### and remove all snapshots from parallel run
-    SNAPTOREMOVE=$(xe vm-list is-control-domain=false is-a-snapshot=true | grep $INTRANDOME | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g')
-    while IFS= read -r NAME
-    do
-      xe vm-uninstall vm=${NAME} force=true
-    done <<< "$SNAPTOREMOVE"
   fi
-  ### now go on in normal run
-  if [[ $PARALEL != "true" ]]; then
-    if [[ $(FREESPACE $VMUUID $MOUNTPOINT) != "true" ]]; then
-        if [[ "$FREESPACECHECK" == "force" ]]; then
-          LOGGERMASSAGE 1 "Warn: not enough space to export $VMNAME to $MOUNTPOINT but FREESPACECHECK is force. I go on with export."
-        fi
-    fi
+fi
 
-    if [[ $(FREESPACE $VMUUID $MOUNTPOINT) == "true" ]] || [[ "$FREESPACECHECK" == "force" ]] ; then
-      LOGGERMASSAGE "create snapshoot from: $VMNAME"
-      SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE"`
-      xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
+### Paralel run: start snapshot and export:
+if [[ $PARALEL == "true" ]]; then
+
+  while IFS= read -r VMUUID
+  do
+    VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g'`
+      ### check if maximum number on paralel runs is reached
+      if [[ ! -z $MAXPARALEL ]]; then
+        while true; do
+          if [[ $(PARALELRUN -c) -ge $MAXPARALEL ]]; then
+            sleep 100
+          else
+            break
+          fi
+        done
+      fi
+
+      LOGGERMASSAGE "Paralel run: create snapshoot from: $VMNAME"
+      SNAPUUID=$(xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE-$INTRANDOME")
+      xe template-param-set is-a-template=false ha-always-run=false uuid=$SNAPUUID
       if [[ $? -ne 0 ]]; then
-        LOGGERMASSAGE 0 "Error: When create snapshoot from: $VMNAME  - see xcp-syslog"
-        EXPORTERROR="true"
+        LOGGERMASSAGE 0 "Error: Paralel run - When create snapshoot from: $VMNAME  - see xcp-syslog"
+        PARALELEROROR="true"
       fi
 
       if [[ $GPG == "true" ]]; then
           if [[ $(TESTGPG) == "true" ]]; then
-            LOGGERMASSAGE "export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
-            xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
-            if [[ ${PIPESTATUS[0]} != 0 ]]; then
-              GPGEXPORTERROR="true"
-            fi
+            LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
+            {
+              xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+              if [[ ${PIPESTATUS[0]} != 0 ]]; then
+                LOGGERMASSAGE 1 "Warn: Paralel run: Export snapshoot $VMNAME gpg encoded to $BACKUPPATH not successfully - see xcp-syslog"
+                PARALELEROROR="true"
+                LOGGERMASSAGE "Paralel run: Remove $BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+                rm "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+                if [[ $? -ne 0 ]]; then
+                 LOGGERMASSAGE "Error: Paralel run: Coult not remove $BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+                 EXPORTERROR="true"
+                fi
+              else
+                LOGGERMASSAGE "Paralel run: Export snapshoot $VMNAME gpg encoded to $BACKUPPATH successfullyy"
+              fi
+              LOGGERMASSAGE "Paralel run: remove snapshoot from: $VMNAME"
+              xe vm-uninstall vm=${SNAPUUID} force=true
+              if [[ $? -ne 0 ]]; then
+                LOGGERMASSAGE 0 "Error: Paralel run: Remove snapshots from $VMNAME not successful - see xcp-syslog"
+              else
+                LOGGERMASSAGE "Paralel run: Remove snapshots from $VMNAME successful"
+              fi
+            } &
           else
             LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
-            EXPORTERROR="true"
+            PARALELEROROR="true"
           fi
       else
-        LOGGERMASSAGE "export snapshoot $VMNAME to $BACKUPPATH"
-        xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
+        LOGGERMASSAGE "Paralel run: export snapshoot $VMNAME to $BACKUPPATH"
+        {
+          xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
+          if [[ $? -ne 0 ]]; then
+            LOGGERMASSAGE 1 "Warn: Paralel run: Export snapshoot $VMNAME to $BACKUPPATH not successfully  - see xcp-syslog"
+            PARALELEROROR="true"
+            LOGGERMASSAGE "Paralel run: Remove $BACKUPPATH/$VMNAME-$DATE.xva"
+            rm "$BACKUPPATH/$VMNAME-$DATE.xva"
+            if [[ $? -ne 0 ]]; then
+              LOGGERMASSAGE "Error: Paralel run: Coult not remove $BACKUPPATH/$VMNAME-$DATE.xva"
+              EXPORTERROR="true"
+            fi
+          else
+            LOGGERMASSAGE "Paralel run: Export snapshoot $VMNAME to $BACKUPPATH successfullyy"
+          fi
+          LOGGERMASSAGE "Paralel run: remove snapshoot from: $VMNAME"
+          xe vm-uninstall vm=${SNAPUUID} force=true
+          if [[ $? -ne 0 ]]; then
+            LOGGERMASSAGE 0 "Error: Paralel run: Remove snapshots from $VMNAME not successful - see xcp-syslog"
+          else
+            LOGGERMASSAGE "Paralel run: Remove snapshots from $VMNAME successful"
+          fi
+        } &
       fi
-      if [[ $? -ne 0 ]]; then
-        LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME to $BACKUPPATH  - see xcp-syslog"
-        EXPORTERROR="true"
-      fi
+  done <<< "$VMUUIDS"
 
-      LOGGERMASSAGE "remove snapshoot from: $VMNAME"
-    	xe vm-uninstall uuid=${SNAPUUID} force=true
-      if [[ $? -ne 0 ]]; then
-        LOGGERMASSAGE 0 "Error: When remove snapshoot from: $VMNAME - see xcp-syslog"
-      fi
-    else
-      EXPORTERROR="true"
-      LOGGERMASSAGE 0 "Error: not enough space to export $VMNAME to $MOUNTPOINT"
+  ### Wait for all backups to be exported
+  while true; do
+    if [[ $(PARALELRUN) != "true" ]]; then
+      break
     fi
-  fi
-done <<< "$VMUUIDS"
-
-### Wait for all backups to be exported
-while true; do
-  if [[ $(PARALELRUN) != "true" ]]; then
-    break
-  fi
-  sleep 100
-done
-
-### Test if there a xe vm-export error
-if [[ ! -z $PIDLIST ]]; then
-  IFS=,
-  for PID in $PIDLIST;
-  do
-    while true; do
-      PSPID=$(ps aux | grep "$PID" | grep -v "grep")
-      if [[ -z $PSPID ]]; then
-        break
-      fi
-      sleep 3
-    done
-    wait $PID
-    if [[ $? -ne 0 ]]; then
-      LOGGERMASSAGE 0 "Error: Paralel run: When export snapshoot - see xcp-syslog"
-      EXPORTERROR="true"
-    else
-      PARALELEXIT="OK"
-    fi
+    sleep 100
   done
-fi
 
-if [[ ! -z $GPGEXPORTERROR ]]; then
-      LOGGERMASSAGE 0 "Error: Paralel run: When export snapshoot gpg encodet - see xcp-syslog"
-      EXPORTERROR="true"
-fi
-
-if [[ $PARALELEXIT == "OK" ]]; then
-  if [[ -z $EXPORTERROR ]]; then
-    LOGGERMASSAGE "Paralel run: Export of vm successfully"
+  ### if ther a parralel backup error:
+  if [[ -z ${PARALELEROROR} ]]; then
+    PARALEL="false"
+    LOGGERMASSAGE "Paralel run: Not successfully - go on in normal run"
+  else
+    LOGGERMASSAGE "Paralel run: Export of all vm's are successfully"
   fi
 fi
 
+### Normal run: start snapshot and export
+if [[ $PARALEL != "true" ]]; then
+  while IFS= read -r VMUUID
+  do
+    VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g'`
+    if [[ ! -f $BACKUPPATH/$VMNAME-$DATE.xva ]] || [[ ! -f $BACKUPPATH/$VMNAME-$DATE.xva.gpg ]]; then
+      if [[ $(FREESPACE $VMUUID $MOUNTPOINT) != "true" ]]; then
+          if [[ "$FREESPACECHECK" == "force" ]]; then
+            LOGGERMASSAGE 1 "Warn: not enough space to export $VMNAME to $MOUNTPOINT but FREESPACECHECK is force. I go on with export."
+          fi
+      fi
+
+      if [[ $(FREESPACE $VMUUID $MOUNTPOINT) == "true" ]] || [[ "$FREESPACECHECK" == "force" ]] ; then
+        LOGGERMASSAGE "Create snapshoot from: $VMNAME"
+        SNAPUUID=`xe vm-snapshot uuid=$VMUUID new-name-label="SNAPSHOT-$VMNAME-$DATE-$INTRANDOME"`
+        xe template-param-set is-a-template=false ha-always-run=false uuid=${SNAPUUID}
+        if [[ $? -ne 0 ]]; then
+          LOGGERMASSAGE 0 "Error: When create snapshoot from: $VMNAME  - see xcp-syslog"
+          EXPORTERROR="true"
+        fi
+
+        if [[ $GPG == "true" ]]; then
+            if [[ $(TESTGPG) == "true" ]]; then
+              LOGGERMASSAGE "Export snapshoot $VMNAME gpg encoded to $BACKUPPATH"
+              xe vm-export vm=${SNAPUUID} filename= | gpg2 --encrypt -a --recipient $GPGID --trust-model always > "$BACKUPPATH/$VMNAME-$DATE.xva.gpg"
+              if [[ ${PIPESTATUS[0]} != 0 ]]; then
+                LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME gpg encoded to $BACKUPPATH  - see xcp-syslog"
+                EXPORTERROR="true"
+              else
+                LOGGERMASSAGE "Export snapshoot $VMNAME gpg encoded to $BACKUPPATH successful"
+              fi
+            else
+              LOGGERMASSAGE 0 "Error: GPG-KEY-ID not found - do not export $VMNAME"
+              EXPORTERROR="true"
+            fi
+        else
+          LOGGERMASSAGE "Export snapshoot $VMNAME to $BACKUPPATH"
+          xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
+        fi
+        if [[ $? -ne 0 ]]; then
+          LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME to $BACKUPPATH  - see xcp-syslog"
+          EXPORTERROR="true"
+        else
+          LOGGERMASSAGE "Export snapshoot $VMNAME gpg encoded to $BACKUPPATH successful"  
+        fi
+
+        LOGGERMASSAGE "Remove snapshoot from: $VMNAME"
+        xe vm-uninstall uuid=${SNAPUUID} force=true
+        if [[ $? -ne 0 ]]; then
+          LOGGERMASSAGE 0 "Error: When remove snapshoot from: $VMNAME - see xcp-syslog"
+        fi
+      else
+        EXPORTERROR="true"
+        LOGGERMASSAGE 0 "Error: not enough space to export $VMNAME to $MOUNTPOINT"
+      fi
+    fi  
+  done <<< "$VMUUIDS"
+fi
 
 ### Remove old Backups
 if [[ -z "$EXPORTERROR" ]]; then
@@ -517,7 +523,6 @@ if [[ -z "$EXPORTERROR" ]]; then
 else
   LOGGERMASSAGE 0 "Error: Do not remove old Backups becouse a error in the new backup"
 fi
-
 
 ### YIPPI we are finished
 

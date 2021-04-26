@@ -429,7 +429,7 @@ if [[ $PARALEL == "true" ]]; then
   done
 
   ### if ther a parralel backup error:
-  if [[ -z ${PARALELEROROR} ]]; then
+  if [[ ! -z $PARALELEROROR ]]; then
     PARALEL="false"
     LOGGERMASSAGE "Paralel run: Not successfully - go on in normal run"
   else
@@ -442,7 +442,16 @@ if [[ $PARALEL != "true" ]]; then
   while IFS= read -r VMUUID
   do
     VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g'`
-    if [[ ! -f $BACKUPPATH/$VMNAME-$DATE.xva ]] || [[ ! -f $BACKUPPATH/$VMNAME-$DATE.xva.gpg ]]; then
+    
+    BACKUPAVAILABLE="false"
+    if [[ ! -f "$BACKUPPATH/$VMNAME-$DATE.xva" ]] ; then
+    BACKUPAVAILABLE="true"
+    fi
+    if [[ ! -f "$BACKUPPATH/$VMNAME-$DATE.xva.gpg" ]]; then
+    BACKUPAVAILABLE="true"
+    fi
+
+    if [[ $BACKUPAVAILABLE == "false" ]] ; then
       if [[ $(FREESPACE $VMUUID $MOUNTPOINT) != "true" ]]; then
           if [[ "$FREESPACECHECK" == "force" ]]; then
             LOGGERMASSAGE 1 "Warn: not enough space to export $VMNAME to $MOUNTPOINT but FREESPACECHECK is force. I go on with export."

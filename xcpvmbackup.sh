@@ -444,11 +444,11 @@ if [[ $PARALEL != "true" ]]; then
     VMNAME=`xe vm-list uuid=$VMUUID | grep name-label | sed 's/^\s*[n][a][m][e][-][l][a][b][e][l]\s*[(]\s*[R][W]\s*[)][:]\s*//g'`
     
     BACKUPAVAILABLE="false"
-    if [[ ! -f "$BACKUPPATH/$VMNAME-$DATE.xva" ]] ; then
-    BACKUPAVAILABLE="true"
+    if [[ -f "$BACKUPPATH/$VMNAME-$DATE.xva" ]] ; then
+      BACKUPAVAILABLE="true"
     fi
-    if [[ ! -f "$BACKUPPATH/$VMNAME-$DATE.xva.gpg" ]]; then
-    BACKUPAVAILABLE="true"
+    if [[ -f "$BACKUPPATH/$VMNAME-$DATE.xva.gpg" ]]; then
+      BACKUPAVAILABLE="true"
     fi
 
     if [[ $BACKUPAVAILABLE == "false" ]] ; then

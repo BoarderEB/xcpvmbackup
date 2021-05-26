@@ -484,12 +484,12 @@ if [[ $PARALEL != "true" ]]; then
         else
           LOGGERMASSAGE "Export snapshoot $VMNAME to $BACKUPPATH"
           xe vm-export vm=${SNAPUUID} filename="$BACKUPPATH/$VMNAME-$DATE.xva"
-        fi
-        if [[ $? -ne 0 ]]; then
-          LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME to $BACKUPPATH  - see xcp-syslog"
-          EXPORTERROR="true"
-        else
-          LOGGERMASSAGE "Export snapshoot $VMNAME gpg encoded to $BACKUPPATH successful"  
+          if [[ $? -ne 0 ]]; then
+            LOGGERMASSAGE 0 "Error: When export snapshoot $VMNAME to $BACKUPPATH  - see xcp-syslog"
+            EXPORTERROR="true"
+          else
+            LOGGERMASSAGE "Export snapshoot $VMNAME to $BACKUPPATH successful"  
+          fi
         fi
 
         LOGGERMASSAGE "Remove snapshoot from: $VMNAME"

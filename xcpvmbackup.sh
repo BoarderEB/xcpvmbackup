@@ -262,18 +262,33 @@ function VMEXPPID() {
 function REMOVEMOUNT() {
   # unmount if not befor for the script moundet
   if [[ $MOUNDET != "allrady"  ]]; then
-    LOGGERMASSAGE "unmount NFS $MOUNTPOINT"
-  	umount $MOUNTPOINT
-    if [[ $? -eq 0 ]]; then
-      if [[ ! -z MOUNTEXIST ]]; then
-        LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
-        rm -rf $MOUNTPOINT
-      fi
+    if [[ $(AllradyMoundet) == "false" ]]; then 
+      LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
+      rm -rf $MOUNTPOINT
     else
-      LOGGERMASSAGE 0 "Error: could not umount $MOUNTPOINT because of that not deleted"
+      LOGGERMASSAGE "unmount NFS $MOUNTPOINT" 
+      umount $MOUNTPOINT
+      if [[ $? -eq 0 ]]; then
+        if [[ ! -z MOUNTEXIST ]]; then
+          LOGGERMASSAGE "delete the created mountpoint $MOUNTPOINT"
+          rm -rf $MOUNTPOINT
+        fi
+      else
+        LOGGERMASSAGE 0 "Error: could not umount $MOUNTPOINT because of that not deleted"
+      fi
     fi
   fi
 }
+
+function AllradyMoundet(){
+  MOUNT=$(grep "$NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT" /proc/mounts | grep $MOUNTPOINT)
+  if [[ -z $MOUNT ]]; then
+    echo "false"
+  else
+    echo "true"
+  fi
+}
+
 
 LOGGERMASSAGE 1 "Start Xen Server VM Backup"
 
@@ -292,8 +307,7 @@ fi
 
 ### check if nfs allrady moundet if not mount
 MOUNDET=$(stat -c%d "$MOUNTPOINT")
-MOUNT=$(grep "$NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT" /proc/mounts | grep $MOUNTPOINT)
-if [[ -z $MOUNT ]]; then
+if [[ $(AllradyMoundet) == "false" ]]; then
     LOGGERMASSAGE "mount NFS $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS"
     mount -t nfs $NFS_SERVER_IP:$FILE_LOCATION_ON_NFS $MOUNTPOINT
     if [[ `stat -c%d "$MOUNTPOINT"` -eq $MOUNDET ]]; then
